@@ -1,6 +1,12 @@
+/**
+ * @file CampsiteDB.cpp
+ *
+ * @brief Implementation for the CampsiteDB class
+ *
+ * @author        Tomonori Yoshino
+ * @date          Saturday, April 21
+ */
 #include "CampsiteDB.h"
-
-
 
 
 /**
@@ -190,7 +196,7 @@ void CampsiteDB::print_record( int index, std::ostream& strm ){
  * @param        index   a position where the markers are moved to
  */
 void CampsiteDB::move_to_index( int index ){
-    if ( !bounds_check(index) )
+    if ( !bounds_check(index, true) )
         throw std::length_error{"Index out of bounds."};
 
     int offset = index * sizeof(CampsiteRecord);
@@ -227,6 +233,7 @@ void CampsiteDB::swap_records( int index_1, int index_2 ){
  * @return  a vector conataing read value
  */
 std::vector<Campsite> CampsiteDB::get_range( int first_index, int last_index ){
+    last_index--;  //a user is expected to enter the physical number of records
     //check index
     if ( first_index >= last_index
             && !bounds_check(first_index) && !bounds_check(last_index) )
@@ -237,7 +244,7 @@ std::vector<Campsite> CampsiteDB::get_range( int first_index, int last_index ){
     int offset = first_index * sizeof(CampsiteRecord);
     //set the get marker at the start point
     _file.seekg( offset, std::ios::beg );
-    while ( first_index != last_index ){
+    while ( first_index <= last_index ){
         //put the value into vector
         sites.push_back( get_next_sequential() );
         first_index++;
@@ -250,6 +257,46 @@ std::vector<Campsite> CampsiteDB::get_range( int first_index, int last_index ){
 }
 
 
+
+/**
+ * @brief   returns a pseudo-random integer in the interval [low, high]
+ * @details Sets up an mt19937 Mersenne Twister random number generator
+ *          using a random seed obtained from the best entropy source
+ *          available to the <random> library.
+ *          Notice:  first call incurs additional setup time.
+ *
+ * @remarks This is a stand alone function and cited from Dr. Jason L Causey's
+ *          slides used in Object Oriented Programming in Spring 2018.
+ *          URL https://gitpitch.com/jcausey-astate/CS2124_lecture_notes?p=easy_rand#/
+ *
+ * @param low  lower-bound of interval for random value (included in interval)
+ * @param high upper-bound of interval for random value (included in interval)
+ *
+ * @return pseudo-random integer in the range [low, high]
+ */
+int rand_between(int low, int high){
+    // used to seed with system entropy
+    static std::random_device            seeder;
+    // set up (and seed) the PRNG
+    static std::mt19937                  generator{seeder()};
+    // set up distribution for requested range
+    std::uniform_int_distribution<int>   distribution{low, high};
+    // generate and return result
+    return distribution(generator);
+}
+
+
+
+/**
+ * Gets a record randomly in the file.
+ *
+ * @return  a record gotten randomly
+ */
+Campsite CampsiteDB::get_random(){
+    //gets a random index betwenn [0, N-1]
+    int random_index = rand_between(0, get_record_count()-1);
+    return get_at_index( random_index );
+}
 
 
 
@@ -267,11 +314,7 @@ bool CampsiteDB::bounds_check( int index, bool write ) {
         result = ( index >= 0 && index <= get_record_count() );
     }
     else{  //domain of index for read: [0, N)
-        int current_index = get_current_index();
-        //get_record_count() changes the put marker...
         result = ( index >= 0 && index < get_record_count() );
-        //set the put marker in the same position as previous
-        _file.seekg(current_index*sizeof(CampsiteRecord), std::ios::beg);
     }
     return result;
 }
