@@ -1,11 +1,3 @@
-/**
- * @file CampsiteDB.cpp
- *
- * @brief Implementation for the CampsiteDB class
- *
- * @author        Tomonori Yoshino
- * @date          Saturday, April 21
- */
 #include "CampsiteDB.h"
 
 
